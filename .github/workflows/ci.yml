@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: 3.47.7
+
+jobs:
+  dart:
+    name: analyze & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test bin example/lib example/tool
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter pub publish --dry-run
+
+  windows:
+    # Both Visual Studio generations: windows-2022 ships VS 2022, windows-2025
+    # moved to VS 2026 in June 2026, whose STL rejects <experimental/coroutine>.
+    name: example on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+      - name: Build the example
+        working-directory: example
+        run: |
+          flutter pub get
+          flutter build windows --release
+      - name: Package and patch the MSIX
+        working-directory: example
+        shell: bash
+        run: |
+          dart run msix:build
+          dart run windows_push:patch_manifest \
+            --remote-id=00000000-0000-0000-0000-000000000001 --runtime=2
+          dart run windows_push:patch_manifest \
+            --remote-id=00000000-0000-0000-0000-000000000001 --runtime=2 \
+            | grep -q "already patched"
+          dart run msix:pack
+          ls build/windows/x64/runner/Release/*.msix
+      - name: Unpackaged build starts and reports no push
+        working-directory: example
+        shell: pwsh
+        run: |
+          $exe = "build/windows/x64/runner/Release/windows_push_example.exe"
+          $p = Start-Process $exe -PassThru
+          Start-Sleep -Seconds 15
+          if ($p.HasExited) { throw "exited with $($p.ExitCode)" }
+          Stop-Process -Id $p.Id

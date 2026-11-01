@@ -1,0 +1,29 @@
+name: windows_push_example
+description: "Demonstrates how to use the windows_push plugin."
+publish_to: 'none'
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  windows_push:
+    path: ../
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  http: ^1.4.0
+  msix: ^3.18.0
+
+flutter:
+  uses-material-design: true
+
+# Packaging for a local test: `dart run msix:build`, then
+# `dart run windows_push:patch_manifest --remote-id=<GUID> --runtime=2`,
+# then `dart run msix:pack`. Signed with msix's test certificate; use your own.
+msix_config:
+  display_name: windows_push example
+  publisher_display_name: Example
+  identity_name: example.windowspush
+  capabilities: internetClient

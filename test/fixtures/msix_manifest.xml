@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+  <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" 
+          xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" 
+          xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10" 
+          xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10" 
+          IgnorableNamespaces="uap3 desktop">
+    <Identity Name="example.windowspush" Version="1.0.0.0"
+              Publisher="CN=Example" ProcessorArchitecture="x64" />
+    <Properties>
+      <DisplayName>Push Example</DisplayName>
+      <PublisherDisplayName>Example</PublisherDisplayName>
+      <Logo>Images\StoreLogo.png</Logo>
+      <Description>Example</Description>
+    </Properties>
+    <Resources>
+      <Resource Language="en-us" />
+    </Resources>
+    <Dependencies>
+      <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.2506" />
+    </Dependencies>
+    <Capabilities>
+      <Capability Name="internetClient" />
+  </Capabilities>
+    <Applications>
+      <Application Id="example" Executable="windows_push_example.exe" EntryPoint="Windows.FullTrustApplication">
+        <uap:VisualElements BackgroundColor="transparent"
+          DisplayName="Push Example" Square150x150Logo="Images\Square150x150Logo.png"
+          Square44x44Logo="Images\Square44x44Logo.png" Description="Example">
+        </uap:VisualElements>
+      </Application>
+    </Applications>
+  </Package>

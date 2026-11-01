@@ -1,0 +1,56 @@
+name: Publish
+
+# A tag releases the package when its pubspec carries the tag's version.
+# pub.dev authenticates this run by its GitHub OIDC token (Admin -> Automated
+# publishing, repository hinata-platform/windows_push, tag pattern v{{version}}).
+# The first upload is manual, see RELEASING.md.
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+*']
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  FLUTTER_VERSION: 3.47.7
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # A reviewer approves every release before the OIDC token exists; pub.dev
+    # can require this environment too (Admin -> Automated publishing).
+    environment: pub.dev
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: OIDC token is available
+        run: |
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+            echo "::error::No OIDC token: pub would hang on an interactive login."
+            exit 1
+          fi
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+      - run: flutter pub get
+      # The OIDC token lives in this one step only, never in $GITHUB_ENV, so no
+      # other step of the job can read it.
+      - name: Publish if the pubspec carries the tag's version
+        run: |
+          set -e
+          have="$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}')"
+          [ "$have" = "${GITHUB_REF_NAME#v}" ] || { echo "::error::pubspec says $have"; exit 1; }
+          PUB_TOKEN="$(curl --retry 5 --retry-connrefused -sSLf \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=https://pub.dev" \
+            -H "User-Agent: actions/oidc-client" \
+            -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            | jq -r '.value')"
+          [ -n "$PUB_TOKEN" ] && [ "$PUB_TOKEN" != "null" ] || { echo "::error::no token"; exit 1; }
+          echo "::add-mask::$PUB_TOKEN"
+          export PUB_TOKEN
+          dart pub token add https://pub.dev --env-var PUB_TOKEN
+          flutter pub publish --force

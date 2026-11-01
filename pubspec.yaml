@@ -1,0 +1,35 @@
+name: windows_push
+description: "Windows push notifications (WNS) for Flutter: a channel URI for your server, notification clicks routed to Dart on warm and cold start, and local toasts."
+version: 0.1.0
+homepage: https://github.com/hinata-platform/windows_push
+repository: https://github.com/hinata-platform/windows_push
+issue_tracker: https://github.com/hinata-platform/windows_push/issues
+topics:
+  - notifications
+  - push-notifications
+  - windows
+  - wns
+  - toast
+
+environment:
+  sdk: ^3.8.0
+  flutter: '>=3.32.0'
+
+dependencies:
+  crypto: ^3.0.6
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+executables:
+  patch_manifest:
+
+flutter:
+  plugin:
+    platforms:
+      windows:
+        pluginClass: WindowsPushPluginCApi
