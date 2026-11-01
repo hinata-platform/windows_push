@@ -5,7 +5,8 @@
 # projection has to be produced from the shipped .winmd metadata. This module
 # does that without MSBuild and without a vendored binary:
 #
-#   1. download the two NuGet packages (ordinary zips) at configure time
+#   1. download the Foundation NuGet package (an ordinary zip) at configure
+#      time, and cppwinrt too when the Windows SDK has no generator of its own
 #   2. run cppwinrt.exe over the metadata to generate winrt/Microsoft.Windows.*.h
 #   3. expose the headers as the `windows_push_app_sdk` interface target
 #
@@ -49,12 +50,24 @@ if(NOT _wasdk_base_h AND _wasdk_base_headers)
 endif()
 
 set(WASDK_CPPWINRT_VERSION "${WASDK_CPPWINRT_FALLBACK}")
+# The SDK ships its own generator next to its headers, which matches them by
+# definition. It is the first choice; nuget.org does not carry every build the
+# SDK ships (Windows Kits 10.0.26100 on windows-2025 has 2.0.250303.5).
+set(WASDK_SDK_CPPWINRT_EXE "")
 if(_wasdk_base_h)
   file(STRINGS "${_wasdk_base_h}" _wasdk_version_line
        REGEX "^#define[ \t]+CPPWINRT_VERSION[ \t]" LIMIT_COUNT 1)
   if(_wasdk_version_line MATCHES "\"([0-9][0-9A-Za-z.-]*)\"")
     set(WASDK_CPPWINRT_VERSION "${CMAKE_MATCH_1}")
     message(STATUS "windows_push: SDK cppwinrt is ${WASDK_CPPWINRT_VERSION} (${_wasdk_base_h})")
+  endif()
+  if(_wasdk_base_h MATCHES "^(.*)/Include/([^/]+)/cppwinrt/winrt/base.h$")
+    foreach(_arch x64 x86 arm64)
+      set(_exe "${CMAKE_MATCH_1}/bin/${CMAKE_MATCH_2}/${_arch}/cppwinrt.exe")
+      if(NOT WASDK_SDK_CPPWINRT_EXE AND EXISTS "${_exe}")
+        set(WASDK_SDK_CPPWINRT_EXE "${_exe}")
+      endif()
+    endforeach()
   endif()
 endif()
 
@@ -103,20 +116,25 @@ if(NOT _wasdk_ok)
     "Could not download Microsoft.WindowsAppSDK.Foundation ${WASDK_FOUNDATION_VERSION}")
 endif()
 
-_wasdk_fetch("Microsoft.Windows.CppWinRT" "${WASDK_CPPWINRT_VERSION}"
-             "${WASDK_CPPWINRT_DIR}" _wasdk_ok)
-# Not every SDK's cppwinrt build is published to nuget.org under that exact
-# version. Falling back keeps the build going; a mismatch then surfaces as a
-# clear "Mismatched C++/WinRT headers" error rather than a download failure.
-if(NOT _wasdk_ok AND NOT WASDK_CPPWINRT_VERSION STREQUAL WASDK_CPPWINRT_FALLBACK)
-  message(WARNING "windows_push: cppwinrt ${WASDK_CPPWINRT_VERSION} is not on "
-                  "nuget.org, falling back to ${WASDK_CPPWINRT_FALLBACK}")
-  set(WASDK_CPPWINRT_VERSION "${WASDK_CPPWINRT_FALLBACK}")
+if(WASDK_SDK_CPPWINRT_EXE)
+  set(WASDK_CPPWINRT_EXE "${WASDK_SDK_CPPWINRT_EXE}")
+  message(STATUS "windows_push: using the SDK's ${WASDK_CPPWINRT_EXE}")
+else()
   _wasdk_fetch("Microsoft.Windows.CppWinRT" "${WASDK_CPPWINRT_VERSION}"
                "${WASDK_CPPWINRT_DIR}" _wasdk_ok)
-endif()
-if(NOT _wasdk_ok)
-  message(FATAL_ERROR "Could not download Microsoft.Windows.CppWinRT ${WASDK_CPPWINRT_VERSION}")
+  # Falling back keeps the build going; a mismatch then surfaces as a clear
+  # "Mismatched C++/WinRT headers" error rather than a download failure.
+  if(NOT _wasdk_ok AND NOT WASDK_CPPWINRT_VERSION STREQUAL WASDK_CPPWINRT_FALLBACK)
+    message(WARNING "windows_push: cppwinrt ${WASDK_CPPWINRT_VERSION} is not on "
+                    "nuget.org, falling back to ${WASDK_CPPWINRT_FALLBACK}")
+    set(WASDK_CPPWINRT_VERSION "${WASDK_CPPWINRT_FALLBACK}")
+    _wasdk_fetch("Microsoft.Windows.CppWinRT" "${WASDK_CPPWINRT_VERSION}"
+                 "${WASDK_CPPWINRT_DIR}" _wasdk_ok)
+  endif()
+  if(NOT _wasdk_ok)
+    message(FATAL_ERROR "Could not download Microsoft.Windows.CppWinRT ${WASDK_CPPWINRT_VERSION}")
+  endif()
+  set(WASDK_CPPWINRT_EXE "${WASDK_CPPWINRT_DIR}/bin/cppwinrt.exe")
 endif()
 
 # --- 2. generate the C++/WinRT projection -------------------------------------
@@ -129,7 +147,7 @@ endif()
 #
 # The marker ties the projection to both versions, so a new SDK or generator
 # regenerates it instead of mixing old headers with a new base.h.
-set(_wasdk_projection_stamp "${WASDK_FOUNDATION_VERSION}/${WASDK_CPPWINRT_VERSION}")
+set(_wasdk_projection_stamp "${WASDK_FOUNDATION_VERSION}/${WASDK_CPPWINRT_VERSION}/${WASDK_CPPWINRT_EXE}")
 set(_wasdk_projection_marker "${WASDK_PROJECTION_DIR}/.generated")
 set(_wasdk_projection_current "")
 if(EXISTS "${_wasdk_projection_marker}")
@@ -139,7 +157,7 @@ if(NOT _wasdk_projection_current STREQUAL _wasdk_projection_stamp)
   file(REMOVE_RECURSE "${WASDK_PROJECTION_DIR}")
   message(STATUS "windows_push: generating the C++/WinRT projection")
   execute_process(
-    COMMAND "${WASDK_CPPWINRT_DIR}/bin/cppwinrt.exe"
+    COMMAND "${WASDK_CPPWINRT_EXE}"
             -input "${WASDK_FOUNDATION_DIR}/metadata/Microsoft.Windows.PushNotifications.winmd"
             -input "${WASDK_FOUNDATION_DIR}/metadata/Microsoft.Windows.AppLifecycle.winmd"
             # A toast click activates the app through AppNotifications, not

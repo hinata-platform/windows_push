@@ -62,7 +62,7 @@ jobs:
           dart run windows_push:patch_manifest \
             --remote-id=00000000-0000-0000-0000-000000000001 --runtime=2 \
             | grep -q "already patched"
-          dart run msix:pack
+          dart run msix:pack --install-certificate false
           ls build/windows/x64/runner/Release/*.msix
       - name: Unpackaged build starts and reports no push
         working-directory: example

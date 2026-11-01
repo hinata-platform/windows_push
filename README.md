@@ -127,10 +127,11 @@ buttons, progress) use a toast package and keep this one for push.
 
 ## Build notes
 
-The plugin downloads the Windows App SDK Foundation package and the matching
-`cppwinrt` from nuget.org at configure time and generates only the C++/WinRT
-headers it uses. The `cppwinrt` version is read from the Windows SDK the build
-targets, because generated headers must match the SDK's own `winrt/base.h`.
+The plugin downloads the Windows App SDK Foundation package from nuget.org at
+configure time and generates only the C++/WinRT headers it uses. It generates
+them with the `cppwinrt.exe` of the Windows SDK the build targets, because
+generated headers must match the SDK's own `winrt/base.h`; only when that SDK
+has no generator does it fetch the matching version from nuget.org.
 Nothing extra ships next to your executable.
 
 The plugin builds with Visual Studio 2022 and 2026. If another plugin breaks
