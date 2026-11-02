@@ -3,8 +3,9 @@
 //   WNS_TENANT_ID=<tenant GUID> WNS_CLIENT_ID=<GUID> WNS_CLIENT_SECRET=<secret> \
 //     dart run tool/send_push.dart <channel URI> [argument]
 //
-// The app registration must be multi-tenant; WNS_CLIENT_ID is the same GUID
-// the app passes as remoteId. The secret stays on the server, never in the app.
+// The app registration must be multi-tenant; WNS_CLIENT_ID is its Application
+// (client) ID, the GUID patch_manifest takes as --app-id, not the remoteId the
+// app passes. The secret stays on the server, never in the app.
 import 'dart:convert';
 import 'dart:io';
 

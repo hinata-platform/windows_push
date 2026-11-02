@@ -1,6 +1,6 @@
 // Adds the Windows App SDK push entries to a generated AppxManifest.xml.
 //
-//   dart run windows_push:patch_manifest --remote-id=<GUID> [--runtime=2]
+//   dart run windows_push:patch_manifest --app-id=<GUID> [--runtime=2]
 //       [--manifest=<path>] [--toast-clsid=<GUID>] [--runtime-version=<v>]
 //       [--display-name=<name>]
 //
@@ -14,10 +14,11 @@ const _defaultManifest = 'build/windows/x64/runner/Release/AppxManifest.xml';
 
 const _usage =
     '''
-Usage: dart run windows_push:patch_manifest --remote-id=<GUID> [options]
+Usage: dart run windows_push:patch_manifest --app-id=<GUID> [options]
 
-  --remote-id=<GUID>        Application (client) ID of your Entra app
-                            registration (required)
+  --app-id=<GUID>           Application (client) ID of your Entra app
+                            registration (required). Not the object id
+                            getChannelUri takes.
   --runtime=<major>         Depend on the Windows App Runtime framework,
                             e.g. 2. Omit when you ship it self-contained.
   --runtime-version=<v>     MinVersion of that dependency
@@ -33,8 +34,8 @@ void main(List<String> args) {
     stdout.write(_usage);
     return;
   }
-  final remoteId = _arg(args, 'remote-id');
-  if (remoteId == null) {
+  final appId = _arg(args, 'app-id');
+  if (appId == null) {
     stderr.write(_usage);
     exit(64);
   }
@@ -53,7 +54,7 @@ void main(List<String> args) {
     result = patchManifest(
       file.readAsStringSync(),
       ManifestPatch(
-        remoteId: remoteId,
+        appId: appId,
         toastClsid: _arg(args, 'toast-clsid'),
         runtime: _arg(args, 'runtime'),
         runtimeMinVersion: _arg(args, 'runtime-version'),

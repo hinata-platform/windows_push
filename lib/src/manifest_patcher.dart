@@ -6,7 +6,7 @@ import 'package:crypto/crypto.dart';
 class ManifestPatch {
   /// Creates a patch.
   const ManifestPatch({
-    required this.remoteId,
+    required this.appId,
     this.toastClsid,
     this.runtime,
     this.runtimeMinVersion,
@@ -16,7 +16,7 @@ class ManifestPatch {
   /// Application (client) ID of the Entra app registration. WNS starts the
   /// app through a COM server with this class id when a push arrives while it
   /// is closed.
-  final String remoteId;
+  final String appId;
 
   /// CLSID the shell activates when a toast is clicked. Derived from the
   /// package name when null; see [deriveToastClsid].
@@ -86,7 +86,7 @@ final _guid = RegExp(
 /// Three additions:
 ///
 ///  1. A COM server with `----WindowsAppRuntimePushServer:` whose class id is
-///     the remote id. WNS uses it to start the app to deliver a push.
+///     the app id. WNS uses it to start the app to deliver a push.
 ///  2. `windows.toastNotificationActivation` plus a second COM server with
 ///     `----AppNotificationActivated:` and the same CLSID. This is how the
 ///     shell finds the app when a toast is clicked; registering in code alone
@@ -95,9 +95,9 @@ final _guid = RegExp(
 ///
 /// Idempotent: patching a patched manifest changes nothing.
 PatchResult patchManifest(String xml, ManifestPatch patch) {
-  if (!_guid.hasMatch(patch.remoteId)) {
+  if (!_guid.hasMatch(patch.appId)) {
     throw ManifestPatchException(
-      'remote id "${patch.remoteId}" is not a GUID. Use the Application '
+      'app id "${patch.appId}" is not a GUID. Use the Application '
       '(client) ID of the Entra app registration.',
     );
   }
@@ -153,7 +153,7 @@ PatchResult patchManifest(String xml, ManifestPatch patch) {
             <com:ComServer>
               <com:ExeServer Executable="$executable" DisplayName="$name"
                 Arguments="----WindowsAppRuntimePushServer:">
-                <com:Class Id="${patch.remoteId}" DisplayName="$name push" />
+                <com:Class Id="${patch.appId}" DisplayName="$name push" />
               </com:ExeServer>
             </com:ComServer>
           </com:Extension>
@@ -186,7 +186,7 @@ PatchResult patchManifest(String xml, ManifestPatch patch) {
           '</Extensions>\n      ${xml.substring(end)}';
     }
     changes
-      ..add('push activator class id: ${patch.remoteId}')
+      ..add('push activator class id: ${patch.appId}')
       ..add('toast activator CLSID  : $clsid');
   }
 

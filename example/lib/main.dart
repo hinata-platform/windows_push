@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:windows_push/windows_push.dart';
 
-/// Application (client) ID of your Entra app registration:
+/// Object ID of your app registration's service principal ("Managed
+/// application in local directory" in Entra), not its client ID:
 /// `flutter run --dart-define=WNS_REMOTE_ID=<GUID>`.
 const remoteId = String.fromEnvironment('WNS_REMOTE_ID');
 

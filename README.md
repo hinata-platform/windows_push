@@ -19,7 +19,7 @@ final initial = await push.getInitialNotificationClick();
 if (initial != null) openRoute(initial);
 
 // Ask on every start; channels expire after 30 days.
-final uri = await push.getChannelUri(remoteId: '<Application (client) ID>');
+final uri = await push.getChannelUri(remoteId: '<service principal Object ID>');
 if (uri != null) await myServer.registerWindowsDevice(uri);
 ```
 
@@ -32,7 +32,15 @@ and the toast methods return false. Nothing throws.
 - **An MSIX package.** WNS, the toast activator and the toast notifier all
   need package identity.
 - **An Entra directory and an app registration in it, set to multi-tenant.**
-  Its Application (client) ID is the `remoteId`. A plain Microsoft account
+  Two of its GUIDs are needed, and they are easy to mix up:
+  - the **Application (client) ID** goes into the package manifest
+    (`patch_manifest --app-id`) and is what your server authenticates as;
+  - the **Object ID of its service principal** is the `remoteId` of
+    `getChannelUri`. Open the registration, follow "Managed application in
+    local directory" and take the Object ID there. The Object ID on the
+    registration's own overview page is a different GUID and gets no channel.
+
+  A plain Microsoft account
   without a directory can no longer create app registrations, and a
   registration for personal accounts only never gets a WNS token: the tenant
   endpoints refuse it (AADSTS9002331) and `/consumers` refuses WNS as a target
@@ -72,7 +80,7 @@ split `msix:create` into its two halves and patch in between:
 ```sh
 flutter build windows --release
 dart run msix:build
-dart run windows_push:patch_manifest --remote-id=<GUID> --runtime=2
+dart run windows_push:patch_manifest --app-id=<client ID> --runtime=2
 dart run msix:pack
 ```
 
@@ -81,7 +89,7 @@ before `makeappx` seals the package. The tool is idempotent.
 
 | Option | Meaning |
 | --- | --- |
-| `--remote-id` | Application (client) ID of the app registration. Required. |
+| `--app-id` | Application (client) ID of the app registration. Required. Not the `remoteId` of `getChannelUri`. |
 | `--runtime` | Major version of the Windows App Runtime framework to depend on, such as `2`. Leave it out when you ship the runtime self-contained. |
 | `--runtime-version` | MinVersion of that dependency. Default `2.3.1.0` for runtime 2. `0.0.0.0` is rejected by the Store. |
 | `--toast-clsid` | CLSID the shell activates when a toast is clicked. By default it is derived from the package name. **It must never change once you ship**, or every toast already in Action Center stops opening the app. |

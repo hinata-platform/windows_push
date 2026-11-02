@@ -50,8 +50,11 @@ class WindowsPush {
 
   /// The device's channel URI, or `null` when push is unavailable here.
   ///
-  /// [remoteId] is the Application (client) ID of the Entra app registration
-  /// your server authenticates with; WNS refuses any other. Channels expire
+  /// [remoteId] is the Object ID of the app registration's service principal
+  /// (Entra → the registration → "Managed application in local directory").
+  /// It is neither the Application (client) ID, which goes into the package
+  /// manifest, nor the Object ID on the registration's own overview page; WNS
+  /// refuses a channel for anything else. Channels expire
   /// after 30 days and Windows rotates them, so ask on every start and send the
   /// result to your server instead of caching it.
   ///

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:windows_push/src/manifest_patcher.dart';
 
-const _remoteId = '33fa840e-5c3b-4cc0-8308-227acbecdf0d';
+const _appId = 'e89a5a67-af01-4c79-98a7-09e609f0c831';
 const _clsid = 'C2EC5161-3E44-44EC-97FF-90DC93713ADF';
 
 void main() {
@@ -12,11 +12,11 @@ void main() {
   test('adds both activators with the same toast CLSID', () {
     final result = patchManifest(
       manifest,
-      const ManifestPatch(remoteId: _remoteId, toastClsid: _clsid),
+      const ManifestPatch(appId: _appId, toastClsid: _clsid),
     );
     final xml = result.xml;
     expect(xml, contains('Arguments="----WindowsAppRuntimePushServer:"'));
-    expect(xml, contains('<com:Class Id="$_remoteId"'));
+    expect(xml, contains('<com:Class Id="$_appId"'));
     expect(xml, contains('ToastActivatorCLSID="$_clsid"'));
     expect(xml, contains('Arguments="----AppNotificationActivated:"'));
     expect(xml, contains('<com:Class Id="$_clsid"'));
@@ -41,7 +41,7 @@ void main() {
     );
     final xml = patchManifest(
       withAlias,
-      const ManifestPatch(remoteId: _remoteId),
+      const ManifestPatch(appId: _appId),
     ).xml;
     expect(RegExp('<Extensions>').allMatches(xml), hasLength(1));
     expect(xml, contains('windows.appExecutionAlias'));
@@ -51,7 +51,7 @@ void main() {
   test('appends the runtime dependency after TargetDeviceFamily', () {
     final xml = patchManifest(
       manifest,
-      const ManifestPatch(remoteId: _remoteId, runtime: '2'),
+      const ManifestPatch(appId: _appId, runtime: '2'),
     ).xml;
     final family = xml.indexOf('<TargetDeviceFamily');
     final dependency = xml.indexOf(
@@ -65,7 +65,7 @@ void main() {
     expect(
       () => patchManifest(
         manifest,
-        const ManifestPatch(remoteId: _remoteId, runtime: '3'),
+        const ManifestPatch(appId: _appId, runtime: '3'),
       ),
       throwsA(isA<ManifestPatchException>()),
     );
@@ -73,7 +73,7 @@ void main() {
       () => patchManifest(
         manifest,
         const ManifestPatch(
-          remoteId: _remoteId,
+          appId: _appId,
           runtime: '2',
           runtimeMinVersion: '0.0.0.0',
         ),
@@ -83,15 +83,12 @@ void main() {
   });
 
   test('leaves out the dependency when self-contained', () {
-    final xml = patchManifest(
-      manifest,
-      const ManifestPatch(remoteId: _remoteId),
-    ).xml;
+    final xml = patchManifest(manifest, const ManifestPatch(appId: _appId)).xml;
     expect(xml, isNot(contains('Microsoft.WindowsAppRuntime')));
   });
 
   test('is idempotent', () {
-    const patch = ManifestPatch(remoteId: _remoteId, runtime: '2');
+    const patch = ManifestPatch(appId: _appId, runtime: '2');
     final once = patchManifest(manifest, patch);
     final twice = patchManifest(once.xml, patch);
     expect(twice.changes, isEmpty);
@@ -108,10 +105,7 @@ void main() {
           'xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"',
           '',
         );
-    final xml = patchManifest(
-      bare,
-      const ManifestPatch(remoteId: _remoteId),
-    ).xml;
+    final xml = patchManifest(bare, const ManifestPatch(appId: _appId)).xml;
     expect(xml, contains('xmlns:com='));
     expect(xml, contains('xmlns:desktop='));
     expect(xml, contains('IgnorableNamespaces="uap3 desktop com"'));
@@ -125,14 +119,14 @@ void main() {
           '</Application>',
     );
     expect(
-      () => patchManifest(withToast, const ManifestPatch(remoteId: _remoteId)),
+      () => patchManifest(withToast, const ManifestPatch(appId: _appId)),
       throwsA(isA<ManifestPatchException>()),
     );
   });
 
-  test('rejects a remote id that is not a GUID', () {
+  test('rejects a app id that is not a GUID', () {
     expect(
-      () => patchManifest(manifest, const ManifestPatch(remoteId: 'nope')),
+      () => patchManifest(manifest, const ManifestPatch(appId: 'nope')),
       throwsA(isA<ManifestPatchException>()),
     );
   });
@@ -143,10 +137,7 @@ void main() {
     expect(a, isNot(deriveToastClsid('example.other')));
     expect(a[14], '5');
     expect('89AB', contains(a[19]));
-    final result = patchManifest(
-      manifest,
-      const ManifestPatch(remoteId: _remoteId),
-    );
+    final result = patchManifest(manifest, const ManifestPatch(appId: _appId));
     expect(result.toastClsid, a);
   });
 }
